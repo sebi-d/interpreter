@@ -4,15 +4,16 @@
     #include "calc.h"
 %}
 
-
 %union {
     struct ast *a;
     double d;
     struct symbol *s;
     struct symlist *sl;
     int fn;
+    type t;
 }
 
+%token <t> TYPE
 %token <d> NUMBER
 %token <s> NAME
 %token <fn> FUNC
@@ -23,7 +24,6 @@
 
 %left ADD SUB
 %left MUL DIV
-
 %nonassoc <fn> CMP
 %right EQ
 
@@ -42,21 +42,21 @@ S:
     | S error EOL { yyerrok; printf("> "); }
     ;
 
-exp: exp CMP exp { $$ = newcmp($2, $1, $3); }
+exp:  exp CMP exp { $$ = newcmp($2, $1, $3); }
     | exp ADD exp { $$ = newast('+', $1, $3); }
     | exp SUB exp { $$ = newast('-', $1, $3); }
     | exp MUL exp { $$ = newast('*', $1, $3); }
     | exp DIV exp { $$ = newast('/', $1, $3); }
     | OP exp CP { $$ = $2; }
-    | NUMBER { printf("entered NUMBER\n"); $$ = newnum($1); }
-    | NAME { printf("entered NAME\n"); $$ = newref($1); }
+    | NUMBER { $$ = newnum($1); }
+    | NAME { $$ = newref($1); }
     | NAME EQ exp { $$ = newasgn($1, $3); }    
-    | FUNC OP explist CP { $$ = newfunc($1, $3); }    
+    | TYPE FUNC OP explist CP { $$ = newfunc($2, $4); }    
     | NAME OP explist CP { $$ = newcall($1, $3); }    
     ;
 
 explist: exp
-    | exp ',' explist { $$ = newast('L', $1, $3); }
+    | exp ',' explist { printf("entered expression list\n"); $$ = newast('L', $1, $3); }
     ;
 
 symlist: NAME { $$ = newsymlist($1, NULL); }
@@ -66,10 +66,11 @@ symlist: NAME { $$ = newsymlist($1, NULL); }
 stmt: IF exp THEN list { $$ = newflow('I', $2, $4, NULL); }
     | IF exp THEN list ELSE list { $$ = newflow('I', $2, $4, $6); }
     | WHILE exp DO list { $$ = newflow('W', $2, $4, NULL); }
-    | exp
+    | exp { printf("entered stmt exp rule\n"); }
     ;
 
-list: {$$ = NULL;}
-    | stmt ';' list { if ($3 == NULL) $$ = $1; else $$ = newast('L', $1, $3); }
+list:               { printf("entered null list\n"); $$ = NULL;}
+    | stmt ';' list { printf("entered list stmt rule\n"); if ($3 == NULL) $$ = $1; else $$ = newast('L', $1, $3); }
     ;
+
 %%

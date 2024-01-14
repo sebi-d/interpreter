@@ -54,26 +54,27 @@ extern int yydebug;
     YYEOF = 0,                     /* "end of file"  */
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
-    NUMBER = 258,                  /* NUMBER  */
-    NAME = 259,                    /* NAME  */
-    FUNC = 260,                    /* FUNC  */
-    IF = 261,                      /* IF  */
-    THEN = 262,                    /* THEN  */
-    ELSE = 263,                    /* ELSE  */
-    WHILE = 264,                   /* WHILE  */
-    DO = 265,                      /* DO  */
-    LET = 266,                     /* LET  */
-    EOL = 267,                     /* EOL  */
-    SEP = 268,                     /* SEP  */
-    COMMA = 269,                   /* COMMA  */
-    ADD = 270,                     /* ADD  */
-    SUB = 271,                     /* SUB  */
-    MUL = 272,                     /* MUL  */
-    DIV = 273,                     /* DIV  */
-    OP = 274,                      /* OP  */
-    CP = 275,                      /* CP  */
-    CMP = 276,                     /* CMP  */
-    EQ = 277                       /* EQ  */
+    TYPE = 258,                    /* TYPE  */
+    NUMBER = 259,                  /* NUMBER  */
+    NAME = 260,                    /* NAME  */
+    FUNC = 261,                    /* FUNC  */
+    IF = 262,                      /* IF  */
+    THEN = 263,                    /* THEN  */
+    ELSE = 264,                    /* ELSE  */
+    WHILE = 265,                   /* WHILE  */
+    DO = 266,                      /* DO  */
+    LET = 267,                     /* LET  */
+    EOL = 268,                     /* EOL  */
+    SEP = 269,                     /* SEP  */
+    COMMA = 270,                   /* COMMA  */
+    ADD = 271,                     /* ADD  */
+    SUB = 272,                     /* SUB  */
+    MUL = 273,                     /* MUL  */
+    DIV = 274,                     /* DIV  */
+    OP = 275,                      /* OP  */
+    CP = 276,                      /* CP  */
+    CMP = 277,                     /* CMP  */
+    EQ = 278                       /* EQ  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -82,15 +83,16 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 8 "calc.y"
+#line 7 "calc.y"
 
     struct ast *a;
     double d;
     struct symbol *s;
     struct symlist *sl;
     int fn;
+    type t;
 
-#line 94 "calc.tab.h"
+#line 96 "calc.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

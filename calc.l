@@ -1,6 +1,6 @@
 %{
-    #include "calc.tab.h"
     #include "calc.h"
+    #include "calc.tab.h"
 %}
 
 EXP ([Ee][-+]?[0-9]+)
@@ -18,10 +18,14 @@ EXP ([Ee][-+]?[0-9]+)
 
 ">" { yylval.fn = 1; return CMP; }
 "<" { yylval.fn = 2; return CMP; }
-"!=" { yylval.fn = 2; return CMP; }
-"==" { yylval.fn = 3; return CMP; }
-">=" { yylval.fn = 4; return CMP; }
-"<=" { yylval.fn = 5; return CMP; }
+"!=" { yylval.fn = 3; return CMP; }
+"==" { yylval.fn = 4; return CMP; }
+">=" { yylval.fn = 5; return CMP; }
+"<=" { yylval.fn = 6; return CMP; }
+
+"int" { yylval.t = T_INT; return TYPE; }
+"float" { yylval.t = T_FLOAT; return TYPE; }
+"double" { yylval.t = T_DOUBLE; return TYPE; }
 
 "if" { return IF; }
 "then" { return THEN; }
@@ -29,14 +33,18 @@ EXP ([Ee][-+]?[0-9]+)
 "while" { return WHILE; }
 "do" { return DO; }
 "let" { return LET; }
+
 "print" { yylval.fn = B_print; return FUNC; }
+
  /* names */
-[a-zA-Z][a-zA-Z0-9]* { yylval.s = lookup(yytext); return NAME; }
-[0-9]+"."[0-9]*{EXP}? |
-"."?[0-9]+{EXP}? { yylval.d = atof(yytext); return NUMBER; }
+[a-zA-Z][a-zA-Z0-9]* { printf("%d\n", yylval.t);
+    yylval.s = lookup(yytext, yylval.t); return NAME; }
 
+ /* values */
+[0-9]+"."[0-9]*{EXP}?|"."?[0-9]+{EXP}?"f"? { yylval.d = atof(yytext); return NUMBER; }
+                                        
+ /* comments and whitespace */
 "//".* { /* ignore comments */ }
-
 [ \t]* { /* ignore whitespace */ }
 
 \\\n   {    }

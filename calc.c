@@ -19,8 +19,10 @@ symbol symtab[NHASH];
  * S list of symbols
  * F built in function call
  * C user function call
- */ 
-ast *newast(int nodetype, ast *l, ast *r) {
+ */
+
+ast *newast(int nodetype, ast *l, ast *r)
+{
     ast *a = malloc(sizeof(ast));
     if(!a) {
         yyerror("ast alloc");
@@ -39,6 +41,7 @@ ast* newnum(double d) {
         yyerror("newnum alloc");
         exit(2);
     }
+    
     n->nodetype = 'K';
     n->number = d;
     return (ast*) n;
@@ -58,6 +61,18 @@ double callbuiltin(fncall *f) {
     }
 }
 
+enum type get_type(double d)
+{
+    if(d == (int)d) 
+    {
+        return T_INT;
+    }
+    else 
+    {
+        return T_DOUBLE;
+    }
+}
+
 double eval(ast *a) {
     double result;
 
@@ -69,7 +84,6 @@ double eval(ast *a) {
     switch(a->nodetype) {
         //constant
         case 'K': 
-            printf("entered constant\n");
             result = ((numval*)a)->number; 
             break;
         case 'N':
@@ -97,12 +111,15 @@ double eval(ast *a) {
         case 'M':
             result = -eval(a->l);
             break;
-        case '1': result = (eval(a->l) > eval(a->r)) ? 1 : 0; break;
-        case '2': result = (eval(a->l) < eval(a->r)) ? 1 : 0; break;
-        case '3': result = (eval(a->l) != eval(a->r)) ? 1 : 0; break;
-        case '4': result = (eval(a->l) == eval(a->r)) ? 1 : 0; break;
-        case '5': result = (eval(a->l) >= eval(a->r)) ? 1 : 0; break;
-        case '6': result = (eval(a->l) <= eval(a->r)) ? 1 : 0; break;
+        case '1': result = (eval(a->l) > eval(a->r)) ? 1 : 0; printf(">\n"); break;
+        case '2': result = (eval(a->l) < eval(a->r)) ? 1 : 0; printf("<\n"); break;
+        case '3': result = (eval(a->l) != eval(a->r)) ? 1 : 0; printf("!=\n"); break;
+        case '4': 
+            result = (eval(a->l) == eval(a->r)) ? 1 : 0; 
+            printf("==\n");
+            break;
+        case '5': result = (eval(a->l) >= eval(a->r)) ? 1 : 0; printf(">=\n"); break;
+        case '6': result = (eval(a->l) <= eval(a->r)) ? 1 : 0; printf("<=\n");break;
 
         case 'I':
             if(eval(((flow*)a)->cond) != 0) {
@@ -170,17 +187,24 @@ static unsigned symhash(char * sym) {
     return hash;
 }
 
-symbol *lookup(char *sym) {
+symbol *lookup(char *sym, type t) {
     symbol *sp = &symtab[symhash(sym)%NHASH];
     int scount = NHASH;
     while(--scount > 0) {
-        if(sp->name && !strcmp(sp->name, sym)) { return sp; }
+        if(sp->name && !strcmp(sp->name, sym)) { 
+            if(sp->t != t) {
+                yyerror("conflicting types for %s", sym);
+                return NULL;
+            }
+            return sp; 
+        }
         if(!sp->name) {
             sp->name = strdup(sym);
-            printf("name %s assigned\n", sp->name);
             sp->value = 0;
+            sp->t = t;
             sp->func = NULL;
             sp->syms = NULL;
+            printf("new symbol %s of type %i\n", sym, t);
             return sp;
         }
         if(++sp >= symtab+NHASH) sp = symtab; 
@@ -234,6 +258,7 @@ ast *newref(symbol *s) {
     }
     a->nodetype = 'N';
     a->s = s;
+    printf("new ref assigned ok\n");
     return (ast*) a;
 }
 

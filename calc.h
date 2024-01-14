@@ -3,6 +3,14 @@
 extern int yylineno;
 void yyerror(char*s, ...);
 
+enum type {
+    T_INT = 1,
+    T_FLOAT = 2,
+    T_DOUBLE = 3
+};
+
+typedef enum type type;
+
 typedef struct ast {
     int nodetype;
     struct ast* l;
@@ -15,6 +23,7 @@ typedef struct numval {
 } numval;
 
 typedef struct symbol {
+    type t;
     char *name;
     double value;
     ast *func;
@@ -60,13 +69,14 @@ typedef struct symasgn {
     ast *v;
 } symasgn;
 
+enum type get_type(double d);
 ast *newast(int nodetype, ast *l, ast *r);
 ast *newnum(double d);
 double eval(ast*);
 void treefree(ast*);
 symlist *newsymlist(symbol *sym, symlist* next);
 void symlistfree(symlist *sl);
-symbol *lookup(char*);
+symbol *lookup(char*, type);
 ast *newcmp(int cmptype, ast* l, ast *r);
 ast *newfunc(int functype, ast *l);
 ast *newcall(symbol *s, ast* l);
