@@ -2,7 +2,7 @@
     #include "calc.h"
     #include "calc.tab.h"
 %}
-
+%x COMMENTS
 EXP ([Ee][-+]?[0-9]+)
 
 %%
@@ -35,10 +35,10 @@ EXP ([Ee][-+]?[0-9]+)
 "let" { return LET; }
 
 "print" { yylval.fn = B_print; return FUNC; }
+"scanf" { yylval.fn = B_scanf; return FUNC; }
 
  /* names */
-[a-zA-Z][a-zA-Z0-9]* { printf("%d\n", yylval.t);
-    yylval.s = lookup(yytext, yylval.t); return NAME; }
+[a-zA-Z][a-zA-Z0-9]* { yylval.s = strdup(yytext); return NAME; }
 
  /* values */
 [0-9]+"."[0-9]*{EXP}?|"."?[0-9]+{EXP}?"f"? { yylval.d = atof(yytext); return NUMBER; }
@@ -47,7 +47,12 @@ EXP ([Ee][-+]?[0-9]+)
 "//".* { /* ignore comments */ }
 [ \t]* { /* ignore whitespace */ }
 
+"/*"            { BEGIN(COMMENTS); }
+<COMMENTS>\*\/  { BEGIN(INITIAL); }
+<COMMENTS>\n    { yylineno++; }
+<COMMENTS>.     { }
+
 \\\n   {    }
-\n { return EOL; }
+\n { yylineno++; return EOL; }
 . { printf("Mystery character %c\n", *yytext); }
 %%

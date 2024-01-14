@@ -30,15 +30,22 @@
 %type <a> exp stmt list explist
 %type <sl> symlist
 
+
 %start S
 %%
 S: 
-    | S stmt EOL {
-                    printf("entered start\n");
-                    printf("= %4.4g\n", eval($2));
-                    treefree($2);
-                }
-    | S LET NAME OP symlist CP EQ list EOL { dodef($3, $5, $8); printf("defined %s\n> ", $3->name); }
+    | S list EOL 
+    {
+        printf("entered start\n");
+        printf("= %4.4g\n", eval($2));
+        treefree($2);
+        printf("> ");
+    }
+    | S LET NAME OP symlist CP EQ list EOL 
+    { 
+        dodef($3, $5, $8); 
+        printf("defined %s\n> ", $3->name);
+    }
     | S error EOL { yyerrok; printf("> "); }
     ;
 
@@ -49,18 +56,49 @@ exp:  exp CMP exp { $$ = newcmp($2, $1, $3); }
     | exp DIV exp { $$ = newast('/', $1, $3); }
     | OP exp CP { $$ = $2; }
     | NUMBER { $$ = newnum($1); }
-    | NAME { $$ = newref($1); }
-    | NAME EQ exp { $$ = newasgn($1, $3); }    
-    | TYPE FUNC OP explist CP { $$ = newfunc($2, $4); }    
-    | NAME OP explist CP { $$ = newcall($1, $3); }    
+    | NAME 
+    {    
+        $$ = newref(lookup($1, 0)); 
+        if ($$ == NULL) {
+            printf("Error: Variable is undeclared.\n");
+            YYERROR;
+        }
+    }
+    | NAME EQ exp 
+    { 
+        printf("entered name eq exp\n");
+        $$ = newasgn(lookup($1, 0), $3);
+        if ($$ == NULL) {
+            printf("Error: Variable is undeclared.\n");
+            YYERROR;
+        }   
+    }    
+    | FUNC OP explist CP { $$ = newfunc($1, $3); }    
+    | NAME OP explist CP { $$ = newcall($1, $3); } 
+    | TYPE NAME 
+    {   
+        $$ = newref(lookup($2, $1)); 
+        if ($$ == NULL) {
+            printf("Error: Variable is already declared.\n");
+            YYERROR;
+        }  
+    }
+    | TYPE NAME EQ exp 
+    { 
+        $$ = newasgn(lookup($2, $1), $4);
+        if ($$ == NULL) {
+            printf("Error: Variable is already declared.\n");
+            YYERROR;
+        }  
+    }
     ;
 
 explist: exp
-    | exp ',' explist { printf("entered expression list\n"); $$ = newast('L', $1, $3); }
+    | exp COMMA explist { printf("entered expression list\n"); $$ = newast('L', $1, $3); }
     ;
 
 symlist: NAME { $$ = newsymlist($1, NULL); }
-    | NAME ',' symlist  { $$ = newsymlist($1, $3); }
+    | NAME COMMA symlist  { $$ = newsymlist($1, $3); }
     ;
 
 stmt: IF exp THEN list { $$ = newflow('I', $2, $4, NULL); }
@@ -69,8 +107,16 @@ stmt: IF exp THEN list { $$ = newflow('I', $2, $4, NULL); }
     | exp { printf("entered stmt exp rule\n"); }
     ;
 
-list:               { printf("entered null list\n"); $$ = NULL;}
-    | stmt ';' list { printf("entered list stmt rule\n"); if ($3 == NULL) $$ = $1; else $$ = newast('L', $1, $3); }
+list:               { printf("entered list empty rule\n"); $$ = NULL; }
+    | stmt SEP list { printf("entered list stmt rule\n"); if ($3 == NULL) $$ = $1; else $$ = newast('L', $1, $3); }
     ;
 
 %%
+
+int main() {
+
+    printf("> ");
+    yyparse();
+
+    return 0;
+}

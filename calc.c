@@ -55,6 +55,11 @@ double callbuiltin(fncall *f) {
         case B_print:
             printf("= %4.4g\n", v);
             return v;
+        case B_scanf:
+            printf("scanf: ");
+            double newval;
+            scanf("%lf", &newval);
+            return newval;
         default:
             yyerror("unknown function %d", functype);
             return 0;
@@ -77,7 +82,6 @@ double eval(ast *a) {
     double result;
 
     if(!a) {
-        yyerror("null ast");
         return 0;
     }
 
@@ -111,15 +115,14 @@ double eval(ast *a) {
         case 'M':
             result = -eval(a->l);
             break;
-        case '1': result = (eval(a->l) > eval(a->r)) ? 1 : 0; printf(">\n"); break;
-        case '2': result = (eval(a->l) < eval(a->r)) ? 1 : 0; printf("<\n"); break;
-        case '3': result = (eval(a->l) != eval(a->r)) ? 1 : 0; printf("!=\n"); break;
+        case '1': result = (eval(a->l) > eval(a->r)) ? 1 : 0; break;
+        case '2': result = (eval(a->l) < eval(a->r)) ? 1 : 0; break;
+        case '3': result = (eval(a->l) != eval(a->r)) ? 1 : 0; break;
         case '4': 
             result = (eval(a->l) == eval(a->r)) ? 1 : 0; 
-            printf("==\n");
             break;
-        case '5': result = (eval(a->l) >= eval(a->r)) ? 1 : 0; printf(">=\n"); break;
-        case '6': result = (eval(a->l) <= eval(a->r)) ? 1 : 0; printf("<=\n");break;
+        case '5': result = (eval(a->l) >= eval(a->r)) ? 1 : 0; break;
+        case '6': result = (eval(a->l) <= eval(a->r)) ? 1 : 0; break;
 
         case 'I':
             if(eval(((flow*)a)->cond) != 0) {
@@ -153,6 +156,7 @@ double eval(ast *a) {
 }
 
 void treefree(ast* a) {
+    if(!a) return;
     switch(a->nodetype) {
         case '+':
         case '-':
@@ -188,17 +192,31 @@ static unsigned symhash(char * sym) {
 }
 
 symbol *lookup(char *sym, type t) {
+    printf("entered lookup\n");
+    printf("sym: %s\n", sym);
+    printf("t: %i\n", t);
     symbol *sp = &symtab[symhash(sym)%NHASH];
     int scount = NHASH;
     while(--scount > 0) {
         if(sp->name && !strcmp(sp->name, sym)) { 
+            if(t == 0) {
+                return sp;
+            }
             if(sp->t != t) {
                 yyerror("conflicting types for %s", sym);
+                return NULL;
+            }
+            if(sp->t == t) {
+                yyerror("%s already declared", sym);
                 return NULL;
             }
             return sp; 
         }
         if(!sp->name) {
+            if(t == 0) {
+                yyerror("undefined symbol type %s", sym);
+                return NULL;
+            }
             sp->name = strdup(sym);
             sp->value = 0;
             sp->t = t;
@@ -219,7 +237,6 @@ ast* newcmp(int cmptype, ast *l, ast *r) {
         yyerror("malloc ast");
         exit(-3);
     }
-
     a->nodetype = '0' + cmptype;
     a->l = l;
     a->r = r;
@@ -251,6 +268,9 @@ ast *newcall(symbol *s, ast *l) {
 }
 
 ast *newref(symbol *s) {
+    if(!s) {
+        return NULL;
+    }
     symref *a = malloc(sizeof(symref));
     if(!a) {
         yyerror("malloc ast");
@@ -258,17 +278,18 @@ ast *newref(symbol *s) {
     }
     a->nodetype = 'N';
     a->s = s;
-    printf("new ref assigned ok\n");
     return (ast*) a;
 }
 
 ast *newasgn(symbol *s, ast *v) {
+    if(!s) {
+        return NULL;
+    }
     symasgn *a = malloc(sizeof(symasgn));
     if(!a) {
         yyerror("malloc ast");
         exit(-7);
     }
-
     a->nodetype = '=';
     a->s = s;
     a->v = v;
@@ -391,9 +412,4 @@ void yyerror(char *s, ...) {
     fprintf(stderr, "%d: error: ", yylineno);
     vfprintf(stderr, s, ap);
     fprintf(stderr, "\n");
-}
-
-int main(){
-    printf("> ");
-    return yyparse();
 }

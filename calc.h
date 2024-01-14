@@ -1,3 +1,5 @@
+#ifndef CALC_H
+#define CALC_H
 #include <string.h>
 
 extern int yylineno;
@@ -36,7 +38,8 @@ typedef struct symlist {
 } symlist;
 
 enum bifs { /* built-in functions */
-    B_print = 1
+    B_print = 1,
+    B_scanf = 2
 };
 
 typedef struct fncall {
@@ -86,3 +89,5 @@ ast *newflow(int nodetype, ast *cond, ast *tl, ast *tr);
 double callbuiltin(fncall *);
 double calluser(ufncall *);
 void dodef(symbol *name, symlist *syms, ast *stmts);
+
+#endif // CALC_H
