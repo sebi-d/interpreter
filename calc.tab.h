@@ -73,8 +73,10 @@ extern int yydebug;
     DIV = 274,                     /* DIV  */
     OP = 275,                      /* OP  */
     CP = 276,                      /* CP  */
-    CMP = 277,                     /* CMP  */
-    EQ = 278                       /* EQ  */
+    OB = 277,                      /* OB  */
+    CB = 278,                      /* CB  */
+    EQ = 279,                      /* EQ  */
+    CMP = 280                      /* CMP  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -92,7 +94,7 @@ union YYSTYPE
     int fn;
     type t;
 
-#line 96 "calc.tab.h"
+#line 98 "calc.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

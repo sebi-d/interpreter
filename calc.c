@@ -87,7 +87,7 @@ double eval(ast *a) {
 
     switch(a->nodetype) {
         //constant
-        case 'K': 
+        case 'K':
             result = ((numval*)a)->number; 
             break;
         case 'N':
@@ -98,7 +98,20 @@ double eval(ast *a) {
             printf("entered =\n");
             symasgn *tmp = (symasgn*)a;
             result = eval(tmp->v);
-            tmp->s->value = result;
+            switch(((symref*)a)->s->t) {
+                case T_INT:
+                    tmp->s->value = (int)result;
+                    break;
+                case T_FLOAT:
+                    tmp->s->value = (float)result;
+                    break;
+                case T_DOUBLE:
+                    tmp->s->value = (double)result;
+                    break;
+                default:
+                    yyerror("unknown type %i", ((symref*)a)->s->t);
+                    break;
+            } 
             break;
         case '+':
             result = eval(a->l) + eval(a->r);
@@ -176,6 +189,7 @@ void treefree(ast* a) {
             free(((flow*)a)->cond);
             if(((flow*)a)->tl) treefree(((flow*)a)->tl);
             if(((flow*)a)->el) treefree(((flow*)a)->el);
+            break;
         default: printf("bad node %c\n", a->nodetype);       
     }
 
@@ -293,7 +307,7 @@ ast *newasgn(symbol *s, ast *v) {
     a->nodetype = '=';
     a->s = s;
     a->v = v;
-    printf("new asgn assigned ok\n");
+    printf("assigned ok\n");
     return (ast*)a;
 }
 
@@ -303,7 +317,7 @@ ast *newflow(int nodetype, ast* cond, ast *tl, ast *el) {
         yyerror("malloc ast");
         exit(-8);
     }
-
+    printf("entered newflow\n");
     a->nodetype = nodetype;
     a->cond = cond;
     a->tl = tl;

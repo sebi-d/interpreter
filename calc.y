@@ -20,16 +20,17 @@
 %token IF THEN ELSE WHILE DO LET
 %token EOL SEP COMMA
 %token ADD SUB MUL DIV
-%token OP CP
+%token OP CP OB CB
 
+%right EQ
 %left ADD SUB
 %left MUL DIV
 %nonassoc <fn> CMP
-%right EQ
 
-%type <a> exp stmt list explist
+%left EOL
+
+%type <a> exp stmt list explist assignment
 %type <sl> symlist
-
 
 %start S
 %%
@@ -49,32 +50,24 @@ S:
     | S error EOL { yyerrok; printf("> "); }
     ;
 
-exp:  exp CMP exp { $$ = newcmp($2, $1, $3); }
-    | exp ADD exp { $$ = newast('+', $1, $3); }
-    | exp SUB exp { $$ = newast('-', $1, $3); }
-    | exp MUL exp { $$ = newast('*', $1, $3); }
-    | exp DIV exp { $$ = newast('/', $1, $3); }
-    | OP exp CP { $$ = $2; }
-    | NUMBER { $$ = newnum($1); }
+exp:  exp CMP exp { printf("entered cmp rule\n"); $$ = newcmp($2, $1, $3); }
+    | exp ADD exp { printf("entered add rule\n"); $$ = newast('+', $1, $3); }
+    | exp SUB exp { printf("entered sub rule\n"); $$ = newast('-', $1, $3); }
+    | exp MUL exp { printf("entered mul rule\n"); $$ = newast('*', $1, $3); }
+    | exp DIV exp { printf("entered div rule\n"); $$ = newast('/', $1, $3); }
+    | OP exp CP   { printf("entered brackets\n"); $$ = $2; }
+    | NUMBER      { printf("entered number rule\n"); $$ = newnum($1); }
     | NAME 
     {    
+        printf("entered name rule\n");
         $$ = newref(lookup($1, 0)); 
         if ($$ == NULL) {
             printf("Error: Variable is undeclared.\n");
             YYERROR;
         }
     }
-    | NAME EQ exp 
-    { 
-        printf("entered name eq exp\n");
-        $$ = newasgn(lookup($1, 0), $3);
-        if ($$ == NULL) {
-            printf("Error: Variable is undeclared.\n");
-            YYERROR;
-        }   
-    }    
     | FUNC OP explist CP { $$ = newfunc($1, $3); }    
-    | NAME OP explist CP { $$ = newcall($1, $3); } 
+    | NAME OP explist CP { $$ = newcall($1, $3); }
     | TYPE NAME 
     {   
         $$ = newref(lookup($2, $1)); 
@@ -83,8 +76,21 @@ exp:  exp CMP exp { $$ = newcmp($2, $1, $3); }
             YYERROR;
         }  
     }
+    | assignment {printf("entered assignment rule\n");}
+    ;
+
+assignment: NAME EQ exp
+    { 
+        printf("entered name eq exp\n");
+        $$ = newasgn(lookup($1, 0), $3);
+        if ($$ == NULL) {
+            printf("Error: Variable is undeclared.\n");
+            YYERROR;
+        }   
+    }    
     | TYPE NAME EQ exp 
     { 
+        printf("entered type name eq exp\n");
         $$ = newasgn(lookup($2, $1), $4);
         if ($$ == NULL) {
             printf("Error: Variable is already declared.\n");
@@ -92,6 +98,12 @@ exp:  exp CMP exp { $$ = newcmp($2, $1, $3); }
         }  
     }
     ;
+
+cast: TYPE OP exp CP { 
+                        printf("new cast\n");
+                        $$ = newcast($1, $3);
+                    }
+
 
 explist: exp
     | exp COMMA explist { printf("entered expression list\n"); $$ = newast('L', $1, $3); }
@@ -101,9 +113,9 @@ symlist: NAME { $$ = newsymlist($1, NULL); }
     | NAME COMMA symlist  { $$ = newsymlist($1, $3); }
     ;
 
-stmt: IF exp THEN list { $$ = newflow('I', $2, $4, NULL); }
-    | IF exp THEN list ELSE list { $$ = newflow('I', $2, $4, $6); }
-    | WHILE exp DO list { $$ = newflow('W', $2, $4, NULL); }
+stmt: IF OP exp CP OB list CB { printf("entered if\n"); $$ = newflow('I', $3, $6, NULL); }
+    | IF OP exp CP OB list CB ELSE OB list CB { printf("entered if else\n"); $$ = newflow('I', $3, $6, $10); }
+    | WHILE OP exp CP OB list CB { printf("entered while\n"); $$ = newflow('W', $3, $6, NULL); }
     | exp { printf("entered stmt exp rule\n"); }
     ;
 

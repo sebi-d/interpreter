@@ -12,6 +12,8 @@ EXP ([Ee][-+]?[0-9]+)
 "/" { return DIV; }
 "(" { return OP; }
 ")" { return CP; }
+"{" { return OB; }
+"}" { return CB; }
 "=" { return EQ; }
 "," { return COMMA; }
 ";" { return SEP; }

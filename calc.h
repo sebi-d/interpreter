@@ -89,5 +89,6 @@ ast *newflow(int nodetype, ast *cond, ast *tl, ast *tr);
 double callbuiltin(fncall *);
 double calluser(ufncall *);
 void dodef(symbol *name, symlist *syms, ast *stmts);
+ast* newcast(type t, ast* exp);
 
 #endif // CALC_H
