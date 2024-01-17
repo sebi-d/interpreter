@@ -2,6 +2,7 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include "calc.h"
+    FILE *logFile;
 %}
 
 %union {
@@ -22,14 +23,15 @@
 %token ADD SUB MUL DIV
 %token OP CP OB CB
 
-%right EQ
 %left ADD SUB
 %left MUL DIV
 %nonassoc <fn> CMP
-
+%right EQ
 %left EOL
 
-%type <a> exp stmt list explist assignment
+
+%type <a> exp stmt list explist assignment cast_expression
+%type <s> declaration
 %type <sl> symlist
 
 %start S
@@ -37,98 +39,77 @@
 S: 
     | S list EOL 
     {
-        printf("entered start\n");
-        printf("= %4.4g\n", eval($2));
+        fprintf(logFile, "= %4.4g\n", eval($2));
         treefree($2);
         printf("> ");
     }
     | S LET NAME OP symlist CP EQ list EOL 
     { 
         dodef($3, $5, $8); 
-        printf("defined %s\n> ", $3->name);
+        fprintf(logFile, "defined %s\n> ", $3->name);
     }
     | S error EOL { yyerrok; printf("> "); }
     ;
 
-exp:  exp CMP exp { printf("entered cmp rule\n"); $$ = newcmp($2, $1, $3); }
-    | exp ADD exp { printf("entered add rule\n"); $$ = newast('+', $1, $3); }
-    | exp SUB exp { printf("entered sub rule\n"); $$ = newast('-', $1, $3); }
-    | exp MUL exp { printf("entered mul rule\n"); $$ = newast('*', $1, $3); }
-    | exp DIV exp { printf("entered div rule\n"); $$ = newast('/', $1, $3); }
-    | OP exp CP   { printf("entered brackets\n"); $$ = $2; }
-    | NUMBER      { printf("entered number rule\n"); $$ = newnum($1); }
-    | NAME 
-    {    
-        printf("entered name rule\n");
-        $$ = newref(lookup($1, 0)); 
-        if ($$ == NULL) {
-            printf("Error: Variable is undeclared.\n");
-            YYERROR;
-        }
-    }
-    | FUNC OP explist CP { $$ = newfunc($1, $3); }    
+exp:  exp CMP exp { fprintf(logFile, "entered cmp \n"); $$ = newcmp($2, $1, $3); }
+    | exp ADD exp { fprintf(logFile, "entered add \n"); $$ = newast('+', $1, $3); }
+    | exp SUB exp { fprintf(logFile, "entered sub \n"); $$ = newast('-', $1, $3); }
+    | exp MUL exp { fprintf(logFile, "entered mul \n"); $$ = newast('*', $1, $3); }
+    | exp DIV exp { fprintf(logFile, "entered div \n"); $$ = newast('/', $1, $3); }
+    | OP exp CP   { fprintf(logFile, "entered brackets\n"); $$ = $2; }
+    | NUMBER      { fprintf(logFile, "entered number \n"); $$ = newnum($1); }
+    | NAME        { fprintf(logFile, "entered name \n"); $$ = newref(lookup($1, 0)); }
+    | FUNC OP explist CP { fprintf(logFile, "entered function\n"); $$ = newfunc($1, $3); }    
     | NAME OP explist CP { $$ = newcall($1, $3); }
-    | TYPE NAME 
-    {   
-        $$ = newref(lookup($2, $1)); 
-        if ($$ == NULL) {
-            printf("Error: Variable is already declared.\n");
-            YYERROR;
-        }  
-    }
-    | assignment {printf("entered assignment rule\n");}
+    | cast_expression { $$ = $1; }
+    ;
+
+explist: exp
+    | exp COMMA explist { fprintf(logFile, "entered expression list\n"); $$ = newast('L', $1, $3); }
+    ;
+
+declaration: TYPE NAME { fprintf(logFile, "entered type name\n"); $$ = lookup($2, $1); }
+    ;
+
+symlist: declaration { $$ = newsymlist($1, NULL); }
+    | declaration COMMA symlist  { $$ = newsymlist($1, $3); }
     ;
 
 assignment: NAME EQ exp
     { 
-        printf("entered name eq exp\n");
+        fprintf(logFile, "entered name eq exp\n");
         $$ = newasgn(lookup($1, 0), $3);
-        if ($$ == NULL) {
-            printf("Error: Variable is undeclared.\n");
-            YYERROR;
-        }   
     }    
-    | TYPE NAME EQ exp 
+    | declaration EQ exp 
     { 
-        printf("entered type name eq exp\n");
-        $$ = newasgn(lookup($2, $1), $4);
-        if ($$ == NULL) {
-            printf("Error: Variable is already declared.\n");
-            YYERROR;
-        }  
+        fprintf(logFile, "entered type name eq exp\n");
+        $$ = newasgn($1, $3);
     }
     ;
+    
+cast_expression: OP TYPE CP exp %prec CMP
+        { $$ = newcast($2, $4); }
+	;
 
-cast: TYPE OP exp CP { 
-                        printf("new cast\n");
-                        $$ = newcast($1, $3);
-                    }
-
-
-explist: exp
-    | exp COMMA explist { printf("entered expression list\n"); $$ = newast('L', $1, $3); }
+stmt: IF OP exp CP OB list CB { fprintf(logFile, "entered if\n"); $$ = newflow('I', $3, $6, NULL); }
+    | IF OP exp CP OB list CB ELSE OB list CB { fprintf(logFile, "entered if else\n"); $$ = newflow('I', $3, $6, $10); }
+    | WHILE OP exp CP OB list CB { fprintf(logFile, "entered while\n"); $$ = newflow('W', $3, $6, NULL); }
+    | exp { fprintf(logFile, "entered stmt exp\n"); }
+    | assignment { fprintf(logFile, "entered stmt assignment\n"); $$ = $1; }
+    | declaration { fprintf(logFile, "entered stmt declaration\n"); $$ = newref($1); }
     ;
 
-symlist: NAME { $$ = newsymlist($1, NULL); }
-    | NAME COMMA symlist  { $$ = newsymlist($1, $3); }
-    ;
-
-stmt: IF OP exp CP OB list CB { printf("entered if\n"); $$ = newflow('I', $3, $6, NULL); }
-    | IF OP exp CP OB list CB ELSE OB list CB { printf("entered if else\n"); $$ = newflow('I', $3, $6, $10); }
-    | WHILE OP exp CP OB list CB { printf("entered while\n"); $$ = newflow('W', $3, $6, NULL); }
-    | exp { printf("entered stmt exp rule\n"); }
-    ;
-
-list:               { printf("entered list empty rule\n"); $$ = NULL; }
-    | stmt SEP list { printf("entered list stmt rule\n"); if ($3 == NULL) $$ = $1; else $$ = newast('L', $1, $3); }
+list:               { fprintf(logFile, "entered list empty \n"); $$ = NULL; }
+    | stmt SEP list { fprintf(logFile, "entered list stmt \n"); if ($3 == NULL) $$ = $1; else $$ = newast('L', $1, $3); }
     ;
 
 %%
 
 int main() {
-
+    logFile = fopen("calc.log", "w");
     printf("> ");
+    setbuf(logFile, NULL);
     yyparse();
-
+    fclose(logFile);
     return 0;
 }

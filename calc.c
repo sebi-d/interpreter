@@ -23,6 +23,7 @@ symbol symtab[NHASH];
 
 ast *newast(int nodetype, ast *l, ast *r)
 {
+    printf("entered new ast\n");
     ast *a = malloc(sizeof(ast));
     if(!a) {
         yyerror("ast alloc");
@@ -50,7 +51,7 @@ ast* newnum(double d) {
 double callbuiltin(fncall *f) {
     enum bifs functype = f->functype;
     double v = eval(f->l);
-
+    printf("function eval: %lf\n", v);
     switch(functype) {
         case B_print:
             printf("= %4.4g\n", v);
@@ -58,7 +59,11 @@ double callbuiltin(fncall *f) {
         case B_scanf:
             printf("scanf: ");
             double newval;
-            scanf("%lf", &newval);
+            scanf("%lf", &newval); 
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF);
+            ((symref *)f->l)->s->value = newval;
+            printf("new value of variable: %lf\n", ((symref *)f->l)->s->value);
             return newval;
         default:
             yyerror("unknown function %d", functype);
@@ -66,64 +71,77 @@ double callbuiltin(fncall *f) {
     }
 }
 
-enum type get_type(double d)
-{
-    if(d == (int)d) 
-    {
-        return T_INT;
+ast *newcast(type t, ast *exp) {
+    cast *c = malloc(sizeof(cast));
+    if (!c) {
+        yyerror("malloc ast");
+        exit(-10);
     }
-    else 
-    {
-        return T_DOUBLE;
-    }
+    (c)->nodetype = 'T';
+    c->t = t;
+    c->v = exp;
+    return (ast*)c;
 }
 
 double eval(ast *a) {
+    printf("eval\n");
+    printf("nodetype: %c\n", a->nodetype);
     double result;
-
-    if(!a) {
-        return 0;
-    }
 
     switch(a->nodetype) {
         //constant
         case 'K':
-            result = ((numval*)a)->number; 
+            printf("eval constant\n");
+            result = ((numval*)a)->number;
+            printf("result : %lf\n", result);
             break;
         case 'N':
-            printf("entered symbol ref\n");
+            printf("eval symbol ref\n");
             result = ((symref*)a)->s->value; 
+            printf("result : %lf\n", result);
             break;
         case '=':
-            printf("entered =\n");
+            printf("eval =\n");
             symasgn *tmp = (symasgn*)a;
             result = eval(tmp->v);
-            switch(((symref*)a)->s->t) {
+            printf("%i\n", tmp->s->t);
+            switch(tmp->s->t) {
                 case T_INT:
+                    printf("eval int\n");
                     tmp->s->value = (int)result;
+                    result = tmp->s->value;
                     break;
                 case T_FLOAT:
+                    printf("eval float\n");
                     tmp->s->value = (float)result;
+                    result = tmp->s->value;
                     break;
                 case T_DOUBLE:
+                    printf("eval double\n");
                     tmp->s->value = (double)result;
+                    result = tmp->s->value;
                     break;
                 default:
-                    yyerror("unknown type %i", ((symref*)a)->s->t);
+                    yyerror("unknown type %i", (tmp->s->t));
                     break;
             } 
+            printf("result : %lf\n", result);
             break;
         case '+':
             result = eval(a->l) + eval(a->r);
+            printf("result : %lf\n", result);
             break;
         case '-':
             result = eval(a->l) - eval(a->r);
+            printf("result : %lf\n", result);
             break;
         case '*':
             result = eval(a->l) * eval(a->r);
+            printf("result : %lf\n", result);
             break;
         case '/':
             result = eval(a->l) / eval(a->r);
+            printf("result : %lf\n", result);
             break;
         case 'M':
             result = -eval(a->l);
@@ -159,17 +177,33 @@ double eval(ast *a) {
                     result = eval(((flow*)a)->tl);
             }
             break;
-        case 'L': eval(a->l); result = eval(a->r); break;
-        case 'F': result = callbuiltin((fncall*)a); break;
-        case 'C': result = calluser((ufncall*)a); break;
+        case 'L': printf("L\n"); eval(a->l); result = eval(a->r); break;
+        case 'F': printf("F\n"); result = callbuiltin((fncall*)a); break;
+        case 'C': printf("C\n"); result = calluser((ufncall*)a); break;
+        case 'T':
+            printf("entered typecast\n");
+            result = eval(((cast*)a)->v);
+            type targetType = ((cast*)a)->t;
+            switch (targetType) {
+                case T_INT:
+                    result = (int)result;
+                    break;
+                case T_FLOAT:
+                    result = (float)result;
+                    break;
+                case T_DOUBLE:
+                    result = (double)result;
+                    break;
+            }
+            break;
         default:
-            printf("bad node %c\n", a->nodetype);   
+            printf("eval bad node %c\n", a->nodetype);
+            break;   
     }
     return result; 
 }
 
 void treefree(ast* a) {
-    if(!a) return;
     switch(a->nodetype) {
         case '+':
         case '-':
@@ -177,7 +211,9 @@ void treefree(ast* a) {
         case '/':
         case '1': case '2': case '3': case '4': case '5':
         case 'L':
+            printf("free L\n");
             treefree(a->r);
+            break;
         case 'M': case 'C' : case 'F':
             treefree(a->l);
         case 'K': case 'N':
@@ -190,7 +226,12 @@ void treefree(ast* a) {
             if(((flow*)a)->tl) treefree(((flow*)a)->tl);
             if(((flow*)a)->el) treefree(((flow*)a)->el);
             break;
-        default: printf("bad node %c\n", a->nodetype);       
+        case 'T':
+            free(((cast*)a)->v);
+            break;
+        default: 
+            printf("tree free bad node %c\n", a->nodetype);
+            break;       
     }
 
     free(a);
@@ -206,9 +247,8 @@ static unsigned symhash(char * sym) {
 }
 
 symbol *lookup(char *sym, type t) {
-    printf("entered lookup\n");
-    printf("sym: %s\n", sym);
-    printf("t: %i\n", t);
+    printf("entered lookup \n");
+    printf("sym: %s type %i\n", sym, t);
     symbol *sp = &symtab[symhash(sym)%NHASH];
     int scount = NHASH;
     while(--scount > 0) {
@@ -282,9 +322,6 @@ ast *newcall(symbol *s, ast *l) {
 }
 
 ast *newref(symbol *s) {
-    if(!s) {
-        return NULL;
-    }
     symref *a = malloc(sizeof(symref));
     if(!a) {
         yyerror("malloc ast");
@@ -296,9 +333,6 @@ ast *newref(symbol *s) {
 }
 
 ast *newasgn(symbol *s, ast *v) {
-    if(!s) {
-        return NULL;
-    }
     symasgn *a = malloc(sizeof(symasgn));
     if(!a) {
         yyerror("malloc ast");
@@ -307,17 +341,17 @@ ast *newasgn(symbol *s, ast *v) {
     a->nodetype = '=';
     a->s = s;
     a->v = v;
-    printf("assigned ok\n");
+    printf("assigned ok %lf\n", eval(v));
     return (ast*)a;
 }
 
 ast *newflow(int nodetype, ast* cond, ast *tl, ast *el) {
+    printf("entered newflow\n");
     flow *a = malloc(sizeof(flow));
     if(!a) {
         yyerror("malloc ast");
         exit(-8);
     }
-    printf("entered newflow\n");
     a->nodetype = nodetype;
     a->cond = cond;
     a->tl = tl;
@@ -360,8 +394,10 @@ double calluser (ufncall *f) {
     }
 
     sl = fn->syms;
-    for(nargs = 0; sl; sl = sl->next)
+    for(nargs = 0; sl; sl = sl->next) {
         nargs++;
+    
+    }
     oldval = (double*) malloc(nargs*sizeof(double));
     newval = (double*) malloc(nargs*sizeof(double));
 
@@ -401,7 +437,6 @@ double calluser (ufncall *f) {
     free(newval);
 
     v = eval(fn->func);
-
     sl = fn->syms;
     for(i = 0; i < nargs; i++) {
         symbol *s = sl->sym;

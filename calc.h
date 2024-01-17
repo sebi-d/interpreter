@@ -72,6 +72,12 @@ typedef struct symasgn {
     ast *v;
 } symasgn;
 
+typedef struct cast {
+    int nodetype;
+    type t;
+    ast *v;
+} cast;
+
 enum type get_type(double d);
 ast *newast(int nodetype, ast *l, ast *r);
 ast *newnum(double d);
@@ -89,6 +95,6 @@ ast *newflow(int nodetype, ast *cond, ast *tl, ast *tr);
 double callbuiltin(fncall *);
 double calluser(ufncall *);
 void dodef(symbol *name, symlist *syms, ast *stmts);
-ast* newcast(type t, ast* exp);
+ast *newcast(type t, ast *v);
 
 #endif // CALC_H

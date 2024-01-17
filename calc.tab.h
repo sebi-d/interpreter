@@ -75,8 +75,8 @@ extern int yydebug;
     CP = 276,                      /* CP  */
     OB = 277,                      /* OB  */
     CB = 278,                      /* CB  */
-    EQ = 279,                      /* EQ  */
-    CMP = 280                      /* CMP  */
+    CMP = 279,                     /* CMP  */
+    EQ = 280                       /* EQ  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -85,7 +85,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 7 "calc.y"
+#line 8 "calc.y"
 
     struct ast *a;
     double d;

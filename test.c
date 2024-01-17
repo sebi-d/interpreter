@@ -1,5 +1,4 @@
 #include <stdio.h>
-
 int main() {
     int a;
     float b;
@@ -7,14 +6,9 @@ int main() {
     a=1;
     b=2.5;
     c = a + b;
-    {
-        int a = 10;
-        {
-            int a = 20;
-            printf("%d\n", a);
-        }
-        int b = 2;
-    }
+    int d = a+b;
+    float d = (float)a;
+    printf("%d\n", d);
     printf("%f\n", c);
     return 0;
 }
