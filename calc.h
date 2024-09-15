@@ -2,6 +2,8 @@
 #define CALC_H
 #include <string.h>
 
+#define NHASH 9997
+
 extern int yylineno;
 void yyerror(char*s, ...);
 
@@ -78,6 +80,20 @@ typedef struct cast {
     ast *v;
 } cast;
 
+typedef struct scope {
+    symbol *symtab;
+    struct scope *parent;
+} scope;
+
+extern scope *topscope;
+extern FILE *logFile;
+extern FILE* yyin;
+
+typedef struct func {
+    symlist *params;
+    ast *body;
+} func;
+
 enum type get_type(double d);
 ast *newast(int nodetype, ast *l, ast *r);
 ast *newnum(double d);
@@ -96,5 +112,8 @@ double callbuiltin(fncall *);
 double calluser(ufncall *);
 void dodef(symbol *name, symlist *syms, ast *stmts);
 ast *newcast(type t, ast *v);
+scope* new_scope();
+void push_scope();
+void pop_scope(); 
 
 #endif // CALC_H

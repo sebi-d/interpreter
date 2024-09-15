@@ -4,9 +4,6 @@
 #include <math.h>
 #include "calc.h"
 
-#define NHASH 9997
-symbol symtab[NHASH];
-
 /* node types
  * + - * / |
  * 0-7 comparison ops, bit coded 04 equal, 02 less, 01 greater
@@ -20,6 +17,8 @@ symbol symtab[NHASH];
  * F built in function call
  * C user function call
  */
+FILE *logFile = NULL;
+scope *topscope = NULL;
 
 ast *newast(int nodetype, ast *l, ast *r)
 {
@@ -62,6 +61,17 @@ double callbuiltin(fncall *f) {
             scanf("%lf", &newval); 
             int c;
             while ((c = getchar()) != '\n' && c != EOF);
+            switch(((symref *)f->l)->s->t) {
+                case T_INT:
+                    newval = (int)newval;
+                    break;
+                case T_FLOAT:
+                    newval = (float)newval;
+                    break;
+                case T_DOUBLE:
+                    newval = (double)newval;
+                    break;
+            }
             ((symref *)f->l)->s->value = newval;
             printf("new value of variable: %lf\n", ((symref *)f->l)->s->value);
             return newval;
@@ -84,6 +94,7 @@ ast *newcast(type t, ast *exp) {
 }
 
 double eval(ast *a) {
+    if(!a) return 0;
     printf("eval\n");
     printf("nodetype: %c\n", a->nodetype);
     double result;
@@ -249,7 +260,7 @@ static unsigned symhash(char * sym) {
 symbol *lookup(char *sym, type t) {
     printf("entered lookup \n");
     printf("sym: %s type %i\n", sym, t);
-    symbol *sp = &symtab[symhash(sym)%NHASH];
+    symbol *sp = &(topscope->symtab[symhash(sym)%NHASH]);
     int scount = NHASH;
     while(--scount > 0) {
         if(sp->name && !strcmp(sp->name, sym)) { 
@@ -279,7 +290,7 @@ symbol *lookup(char *sym, type t) {
             printf("new symbol %s of type %i\n", sym, t);
             return sp;
         }
-        if(++sp >= symtab+NHASH) sp = symtab; 
+        if(++sp >= topscope->symtab+NHASH) sp = topscope->symtab; 
     }
     yyerror("symbol table overflow\n");
     abort();
@@ -454,6 +465,31 @@ void dodef(symbol *name, symlist *syms, ast *func) {
     name->func = func;
 }
 
+scope* new_scope() {
+    scope *_scope = calloc(1, sizeof(scope));
+    if (!_scope) {
+        exit(EXIT_FAILURE);
+    }
+    _scope->symtab = calloc(NHASH, sizeof(symbol));
+    _scope->parent = NULL;
+    return _scope;
+}
+
+void push_scope() {
+    scope *_scope = new_scope(); 
+    _scope->parent = topscope;
+    topscope = _scope;
+    printf("pushed scope\n");
+}
+
+void pop_scope() {
+    scope *old_scope = topscope;
+    topscope = topscope->parent;
+    free(old_scope->symtab);
+    free(old_scope); 
+    printf("popped scope\n");
+}
+
 void yyerror(char *s, ...) {
     va_list ap;
     va_start(ap, s);
@@ -461,4 +497,18 @@ void yyerror(char *s, ...) {
     fprintf(stderr, "%d: error: ", yylineno);
     vfprintf(stderr, s, ap);
     fprintf(stderr, "\n");
+}
+
+int main() { 
+    topscope = new_scope();   
+    logFile = fopen("calc.log", "w");
+    if(!logFile) {
+        yyerror("cannot open log file");
+        exit(1);
+    }
+    printf("> ");
+    setbuf(logFile, NULL);
+    yyparse();
+    fclose(logFile);
+    return 0;
 }

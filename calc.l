@@ -4,6 +4,8 @@
 %}
 %x COMMENTS
 EXP ([Ee][-+]?[0-9]+)
+filepath [a-zA-Z0-9_-]+\.txt
+
 
 %%
 "+" { return ADD; }
@@ -35,6 +37,9 @@ EXP ([Ee][-+]?[0-9]+)
 "while" { return WHILE; }
 "do" { return DO; }
 "let" { return LET; }
+"return" { return RETURN; }
+
+"run "{filepath} {  yyin = fopen(yytext+4, "r"); return FILENAME; }
 
 "print" { yylval.fn = B_print; return FUNC; }
 "scanf" { yylval.fn = B_scanf; return FUNC; }
